@@ -1,5 +1,3 @@
-data.js
-
 const CHECKLIST_DATA = {
 
   "Cemetery of Ash": [
