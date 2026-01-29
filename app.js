@@ -1,44 +1,58 @@
-fetch("data.json")
-  .then(r => r.json())
-  .then(data => {
-    const container = document.getElementById("checklist");
-    let id = 1;
+const checklistEl = document.getElementById("checklist");
+const progressBar = document.getElementById("progressBar");
+const progressText = document.getElementById("progressText");
 
-    for (const area in data) {
-      const details = document.createElement("details");
-      const summary = document.createElement("summary");
-      summary.textContent = area;
-      details.appendChild(summary);
+const STORAGE_KEY = "ds3-checklist-progress";
+const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
 
-      const ul = document.createElement("ul");
-
-      data[area].forEach(step => {
-        const li = document.createElement("li");
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.dataset.id = id;
-        cb.checked = localStorage.getItem(id) === "true";
-
-        cb.onchange = () => {
-          localStorage.setItem(id, cb.checked);
-          updateProgress();
-        };
-
-        li.appendChild(cb);
-        li.append(" " + step);
-        ul.appendChild(li);
-        id++;
-      });
-
-      details.appendChild(ul);
-      container.appendChild(details);
-    }
-    updateProgress();
-  });
+let total = 0;
+let done = 0;
 
 function updateProgress() {
-  const boxes = document.querySelectorAll("input[type='checkbox']");
-  const checked = [...boxes].filter(b => b.checked).length;
-  const percent = Math.round((checked / boxes.length) * 100);
-  document.getElementById("progress-bar").style.width = percent + "%";
+  const percent = total === 0 ? 0 : Math.floor((done / total) * 100);
+  progressBar.value = percent;
+  progressText.textContent = `${percent}% (${done}/${total})`;
 }
+
+for (const [sectionName, items] of Object.entries(CHECKLIST_DATA)) {
+  const section = document.createElement("div");
+  section.className = "section";
+
+  const header = document.createElement("div");
+  header.className = "section-header";
+  header.textContent = sectionName;
+  header.onclick = () => section.classList.toggle("open");
+
+  const body = document.createElement("div");
+  body.className = "section-body";
+
+  items.forEach((text, index) => {
+    const id = `${sectionName}__${index}`;
+    total++;
+
+    const checked = saved[id];
+    if (checked) done++;
+
+    const label = document.createElement("label");
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = !!checked;
+
+    box.onchange = () => {
+      saved[id] = box.checked;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      done += box.checked ? 1 : -1;
+      updateProgress();
+    };
+
+    label.appendChild(box);
+    label.appendChild(document.createTextNode(text));
+    body.appendChild(label);
+  });
+
+  section.appendChild(header);
+  section.appendChild(body);
+  checklistEl.appendChild(section);
+}
+
+updateProgress();
